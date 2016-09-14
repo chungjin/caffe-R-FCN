@@ -1,5 +1,7 @@
 // ------------------------------------------------------------------
 // R-FCN
+// Copyright (c) 2016 Microsoft
+// Licensed under The MIT License [see r-fcn/LICENSE for details]
 // Written by Yi Li
 // ------------------------------------------------------------------
 
@@ -12,10 +14,14 @@
 using std::max;
 using std::min;
 
-namespace caffe {
+namespace caffe {  
+
+    bool mycomp(const std::pair<int, float> &P1, const std::pair<int, float> &P2)
+    { return P1.second> P2.second;}
+
+
   template <typename Dtype>
-  void BoxAnnotatorOHEMLayer<Dtype>::Forward_gpu(
-    const vector<Blob<Dtype>*>& bottom,
+  void BoxAnnotatorOHEMLayer<Dtype>::Forward_gpu(const vector<Blob<Dtype>*>& bottom,
     const vector<Blob<Dtype>*>& top) {
     const Dtype* bottom_rois = bottom[0]->cpu_data();
     const Dtype* bottom_loss = bottom[1]->cpu_data();
@@ -29,9 +35,9 @@ namespace caffe {
     int num_rois_ = bottom[1]->count();
 
     int num_imgs = -1;
-    for (int n = 0; n < num_rois_; n++) {
-      for (int s = 0; s < spatial_dim_; s++) {
-        num_imgs = bottom_rois[0] > num_imgs ? bottom_rois[0] : num_imgs;
+    for (int n = 0; n < num_rois_; n++){
+      for (int s = 0; s < spatial_dim_; s++){
+        num_imgs = bottom_rois[0]>num_imgs ? bottom_rois[0] : num_imgs;
         bottom_rois++;
       }
       bottom_rois += (5-1)*spatial_dim_;
@@ -42,41 +48,41 @@ namespace caffe {
     bottom_rois = bottom[0]->cpu_data();
 
     // Find rois with max loss
-    vector<int> sorted_idx(num_rois_);
-    for (int i = 0; i < num_rois_; i++) {
-      sorted_idx[i] = i;
+    std::vector< std::pair<int, float> > sorted_idx(num_rois_);
+    for (int i = 0; i < num_rois_; i++){
+      sorted_idx[i].first = i;
+      sorted_idx[i].second = bottom_loss[i];
     }
-    std::sort(sorted_idx.begin(), sorted_idx.end(),
-      [bottom_loss](int i1, int i2) {
-        return bottom_loss[i1] > bottom_loss[i2];
-    });
+//    std::sort(sorted_idx.begin(), sorted_idx.end(),
+//      [bottom_loss](int i1, int i2){return bottom_loss[i1] > bottom_loss[i2]; });
+    std::sort(sorted_idx.begin(), sorted_idx.end(), mycomp);
+
 
     // Generate output labels for scoring and loss_weights for bbox regression
     vector<int> number_left(num_imgs, roi_per_img_);
-    for (int i = 0; i < num_rois_; i++) {
-      int index = sorted_idx[i];
+    for (int i = 0; i < num_rois_; i++){
+      int index = sorted_idx[i].first;
       int s = index % (width_*height_);
       int n = index / (width_*height_);
       int batch_ind = bottom_rois[n*5*spatial_dim_+s];
-      if (number_left[batch_ind] > 0) {
+      if (number_left[batch_ind]>0){
         number_left[batch_ind]--;
         top_labels[index] = bottom_labels[index];
-        for (int j = 0; j < bbox_channels_; j++) {
+        for (int j = 0; j < bbox_channels_; j++){
           int bbox_index = (n*bbox_channels_+j)*spatial_dim_+s;
-          top_bbox_loss_weights[bbox_index] =
-            bottom_bbox_loss_weights[bbox_index];
+          top_bbox_loss_weights[bbox_index]=bottom_bbox_loss_weights[bbox_index];
         }
       }
     }
   }
 
   template <typename Dtype>
-  void BoxAnnotatorOHEMLayer<Dtype>::Backward_gpu(
-    const vector<Blob<Dtype>*>& top, const vector<bool>& propagate_down,
-    const vector<Blob<Dtype>*>& bottom) {
+  void BoxAnnotatorOHEMLayer<Dtype>::Backward_gpu(const vector<Blob<Dtype>*>& top,
+    const vector<bool>& propagate_down, const vector<Blob<Dtype>*>& bottom) {
     return;
   }
 
+  
   INSTANTIATE_LAYER_GPU_FUNCS(BoxAnnotatorOHEMLayer);
-
+ 
 }  // namespace caffe
