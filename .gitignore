@@ -1,5 +1,7 @@
 ## General
 
+windows/*
+
 # Compiled Object files
 *.slo
 *.lo
