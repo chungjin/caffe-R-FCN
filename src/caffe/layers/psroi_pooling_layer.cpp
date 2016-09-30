@@ -111,6 +111,7 @@ namespace caffe {
                             int gh = ph;
                             int c = (ctop*group_size + gh)*group_size + gw;
 
+
 //                            bottom_data += (roi_batch_ind * channels + c) * height * width;
                             Dtype out_sum = 0;
                             for (int h = hstart; h < hend; ++h) {
