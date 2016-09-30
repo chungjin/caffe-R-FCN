@@ -247,5 +247,6 @@ namespace caffe {
 #endif
 
     INSTANTIATE_CLASS(PSROIPoolingLayer);
+    REGISTER_LAYER_CLASS(PSROIPooling);
 
 }  // namespace caffe
