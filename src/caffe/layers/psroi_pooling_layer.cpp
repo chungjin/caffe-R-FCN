@@ -111,12 +111,12 @@ namespace caffe {
                             int gh = ph;
                             int c = (ctop*group_size + gh)*group_size + gw;
 
-                            bottom_data += (roi_batch_ind * channels + c) * height * width;
+//                            bottom_data += (roi_batch_ind * channels + c) * height * width;
                             Dtype out_sum = 0;
                             for (int h = hstart; h < hend; ++h) {
                                 for (int w = wstart; w < wend; ++w) {
                                     int bottom_index = h*width + w;
-                                    out_sum += bottom_data[bottom_index];
+                                    out_sum += bottom_data[(roi_batch_ind * channels + c) * height * width + bottom_index];
                                 }
                             }
 
@@ -247,5 +247,6 @@ namespace caffe {
 #endif
 
     INSTANTIATE_CLASS(PSROIPoolingLayer);
+    REGISTER_LAYER_CLASS(PSROIPooling);
 
 }  // namespace caffe
