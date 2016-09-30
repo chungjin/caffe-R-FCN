@@ -69,6 +69,7 @@ namespace caffe {
                 for (int ctop = 0; ctop < output_dim; ++ctop) {
                     for (int ph = 0; ph < pooled_height; ++ph) {
                         for (int pw = 0; pw < pooled_width; ++pw) {
+                            int index = n*output_dim*pooled_height*pooled_width + ctop*pooled_height*pooled_width + ph*pooled_width + pw;
                             // The output is in order (n, ctop, ph, pw)
 
                             // [start, end) interval for spatial sampling
@@ -84,8 +85,8 @@ namespace caffe {
                                 static_cast<Dtype>(round(bottom_rois[4]) + 1.) * spatial_scale;
 
                             // Force too small ROIs to be 1x1
-                            Dtype roi_width = max(roi_end_w - roi_start_w, 0.1);  // avoid 0
-                            Dtype roi_height = max(roi_end_h - roi_start_h, 0.1);
+                            Dtype roi_width = max<Dtype>(roi_end_w - roi_start_w, 0.1);  // avoid 0
+                            Dtype roi_height = max<Dtype>(roi_end_h - roi_start_h, 0.1);
 
                             // Compute w and h at bottom
                             Dtype bin_size_h = roi_height / static_cast<Dtype>(pooled_height);
@@ -137,8 +138,8 @@ namespace caffe {
             Dtype* top_data = top[0]->mutable_cpu_data();
             int* mapping_channel_ptr = mapping_channel_.mutable_cpu_data();
             int count = top[0]->count();
-            caffe_cpu_set(count, Dtype(0), top_data);
-            caffe_cpu_set(count, -1, mapping_channel_ptr);
+            caffe_set(count, Dtype(0), top_data);
+            caffe_set(count, -1, mapping_channel_ptr);
             // NOLINT_NEXT_LINE(whitespace/operators)
             PSROIPoolingForward(bottom[0]->num(), bottom_data, spatial_scale_,
                     channels_, height_, width_, pooled_height_,
@@ -159,55 +160,59 @@ namespace caffe {
                 Dtype* bottom_diff,
                 const Dtype* bottom_rois) {
             for (int n = 0; n < num_rois; ++n) {
-                for (int ph = 0; ph < pooled_height; ++ph) {
-                    for (int pw = 0; pw < pooled_width; ++pw) {
-                        // The output is in order (n, ctop, ph, pw)
+                for (int ctop = 0; ctop < output_dim; ++ctop) {
+                    for (int ph = 0; ph < pooled_height; ++ph) {
+                        for (int pw = 0; pw < pooled_width; ++pw) {
+                            int index = ((n*output_dim + ctop)*pooled_height+ph)*pooled_width;
+                            // The output is in order (n, ctop, ph, pw)
 
-                        // [start, end) interval for spatial sampling
-                        bottom_rois += n * 5;
-                        int roi_batch_ind = bottom_rois[0];
-                        Dtype roi_start_w =
-                            static_cast<Dtype>(round(bottom_rois[1])) * spatial_scale;
-                        Dtype roi_start_h =
-                            static_cast<Dtype>(round(bottom_rois[2])) * spatial_scale;
-                        Dtype roi_end_w =
-                            static_cast<Dtype>(round(bottom_rois[3]) + 1.) * spatial_scale;
-                        Dtype roi_end_h =
-                            static_cast<Dtype>(round(bottom_rois[4]) + 1.) * spatial_scale;
+                            // [start, end) interval for spatial sampling
+                            bottom_rois += n * 5;
+                            int roi_batch_ind = bottom_rois[0];
+                            Dtype roi_start_w =
+                                static_cast<Dtype>(round(bottom_rois[1])) * spatial_scale;
+                            Dtype roi_start_h =
+                                static_cast<Dtype>(round(bottom_rois[2])) * spatial_scale;
+                            Dtype roi_end_w =
+                                static_cast<Dtype>(round(bottom_rois[3]) + 1.) * spatial_scale;
+                            Dtype roi_end_h =
+                                static_cast<Dtype>(round(bottom_rois[4]) + 1.) * spatial_scale;
 
-                        // Force too small ROIs to be 1x1
-                        Dtype roi_width = max(roi_end_w - roi_start_w, 0.1);  // avoid 0
-                        Dtype roi_height = max(roi_end_h - roi_start_h, 0.1);
+                            // Force too small ROIs to be 1x1/
+                            Dtype roi_width = max<Dtype>(roi_end_w - roi_start_w, 0.1);  // avoid 0
+                            Dtype roi_height = max<Dtype>(roi_end_h - roi_start_h, 0.1);
 
-                        // Compute w and h at bottom
-                        Dtype bin_size_h = roi_height / static_cast<Dtype>(pooled_height);
-                        Dtype bin_size_w = roi_width / static_cast<Dtype>(pooled_width);
+                            // Compute w and h at bottom
+                            Dtype bin_size_h = roi_height / static_cast<Dtype>(pooled_height);
+                            Dtype bin_size_w = roi_width / static_cast<Dtype>(pooled_width);
 
-                        int hstart = floor(static_cast<Dtype>(ph)* bin_size_h
-                                + roi_start_h);
-                        int wstart = floor(static_cast<Dtype>(pw)* bin_size_w
-                                + roi_start_w);
-                        int hend = ceil(static_cast<Dtype>(ph + 1) * bin_size_h
-                                + roi_start_h);
-                        int wend = ceil(static_cast<Dtype>(pw + 1) * bin_size_w
-                                + roi_start_w);
-                        // Add roi offsets and clip to input boundaries
-                        hstart = min(max(hstart, 0), height);
-                        hend = min(max(hend, 0), height);
-                        wstart = min(max(wstart, 0), width);
-                        wend = min(max(wend, 0), width);
-                        bool is_empty = (hend <= hstart) || (wend <= wstart);
+                            int hstart = floor(static_cast<Dtype>(ph)* bin_size_h
+                                    + roi_start_h);
+                            int wstart = floor(static_cast<Dtype>(pw)* bin_size_w
+                                    + roi_start_w);
+                            int hend = ceil(static_cast<Dtype>(ph + 1) * bin_size_h
+                                    + roi_start_h);
+                            int wend = ceil(static_cast<Dtype>(pw + 1) * bin_size_w
+                                    + roi_start_w);
+                            // Add roi offsets and clip to input boundaries
+                            hstart = min(max(hstart, 0), height);
+                            hend = min(max(hend, 0), height);
+                            wstart = min(max(wstart, 0), width);
+                            wend = min(max(wend, 0), width);
+                            bool is_empty = (hend <= hstart) || (wend <= wstart);
 
-                        // Compute c at bottom
-                        int c = mapping_channel[index];
-                        Dtype* offset_bottom_diff = bottom_diff +
-                            (roi_batch_ind * channels + c) * height * width;
-                        Dtype bin_area = (hend - hstart)*(wend - wstart);
-                        Dtype diff_val = is_empty ? 0. : top_diff[index] / bin_area;
-                        for (int h = hstart; h < hend; ++h) {
-                            for (int w = wstart; w < wend; ++w) {
-                                int bottom_index = h*width + w;
-                                caffe_cpu_atomic_add(diff_val, offset_bottom_diff + bottom_index);
+                            // Compute c at bottom
+                            int c = mapping_channel[index];
+                            Dtype* offset_bottom_diff = bottom_diff +
+                                (roi_batch_ind * channels + c) * height * width;
+                            Dtype bin_area = (hend - hstart)*(wend - wstart);
+                            Dtype diff_val = is_empty ? 0. : top_diff[index] / bin_area;
+                            for (int h = hstart; h < hend; ++h) {
+                                for (int w = wstart; w < wend; ++w) {
+                                    int bottom_index = h*width + w;
+                                    *(offset_bottom_diff + bottom_index) +=diff_val;
+                                   // caffe_gpu_atomic_add(diff_val, offset_bottom_diff + bottom_index);
+                                }
                             }
                         }
                     }
@@ -227,8 +232,8 @@ namespace caffe {
             Dtype* bottom_diff = bottom[0]->mutable_cpu_diff();
             const int bottom_count = bottom[0]->count();
             const int* mapping_channel_ptr = mapping_channel_.cpu_data();
-            caffe_cpu_set(bottom[1]->count(), Dtype(0), bottom[1]->mutable_cpu_diff());
-            caffe_cpu_set(bottom_count, Dtype(0), bottom_diff);
+            caffe_set(bottom[1]->count(), Dtype(0), bottom[1]->mutable_cpu_diff());
+            caffe_set(bottom_count, Dtype(0), bottom_diff);
             const int count = top[0]->count();
             // NOLINT_NEXT_LINE(whitespace/operators)
             PSROIPoolingBackwardAtomic(top_diff, mapping_channel_ptr,
