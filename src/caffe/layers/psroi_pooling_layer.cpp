@@ -4,12 +4,14 @@
 // ------------------------------------------------------------------
 
 #include <cfloat>
+#include <algorithm>
 
 #include <string>
 #include <utility>
 #include <vector>
 
 #include "caffe/layers/psroi_pooling_layer.hpp"
+#include "caffe/util/math_functions.hpp"
 
 using std::max;
 using std::min;
@@ -65,9 +67,10 @@ namespace caffe {
     Dtype* top_data,
     int* mapping_channel) {
      for (int n = 0; n < num; ++n) {
-      for (int ctop = 0; ctop < output_dim; ++c) {
+      for (int ctop = 0; ctop < output_dim; ++ctop) {
         for (int ph = 0; ph < pooled_height; ++ph) {
           for (int pw = 0; pw < pooled_width; ++pw) {
+            index = n*output_dim*pooled_height*pooled_width + ctop*pooled_height*pooled_width + ph*pooled_width + pw
       // The output is in order (n, ctop, ph, pw)
 
       // [start, end) interval for spatial sampling
@@ -109,22 +112,29 @@ namespace caffe {
       int gh = ph;
       int c = (ctop*group_size + gh)*group_size + gw;
 
-      bottom_data += (roi_batch_ind * channels + c) * height * width;
+//      bottom_data += (roi_batch_ind * channels + c) * height * width;
       Dtype out_sum = 0;
       for (int h = hstart; h < hend; ++h) {
         for (int w = wstart; w < wend; ++w) {
           int bottom_index = h*width + w;
-          out_sum += bottom_data[bottom_index];
+          out_sum += bottom_data[(roi_batch_ind * channels + c) * height * width + bottom_index];
         }
       }
 
-      Dtype bin_area = (hend - hstart)*(wend - wstart);
-      top_data[index] = is_empty? 0. : out_sum/bin_area;
-      mapping_channel[index] = c;
+        Dtype bin_area = (hend - hstart)*(wend - wstart);
+        if (is_empty){
+          top_data[index] = 0;
+        }
+        else{
+          top_data[index] = out_sum/bin_area;
+        }
+
+        mapping_channel[index] = c;
+        }
+      }
     }
   }
 }
-  }
 
 
   template <typename Dtype>
@@ -157,11 +167,13 @@ namespace caffe {
     Dtype* bottom_diff,
     const Dtype* bottom_rois) {
      for (int n = 0; n < num_rois; ++n) {
+        for (int ctop = 0; ctop < output_dim; ++ctop) {
         for (int ph = 0; ph < pooled_height; ++ph) {
           for (int pw = 0; pw < pooled_width; ++pw) {
       // The output is in order (n, ctop, ph, pw)
 
       // [start, end) interval for spatial sampling
+            index = ((n*output_dim + ctop)*pooled_height+ph)*pooled_width;
       bottom_rois += n * 5;
       int roi_batch_ind = bottom_rois[0];
       Dtype roi_start_w =
@@ -240,6 +252,5 @@ namespace caffe {
 #endif
 
   INSTANTIATE_CLASS(PSROIPoolingLayer);
-  REGISTER_LAYER_CLASS(PSROIPooling);
 
 }  // namespace caffe

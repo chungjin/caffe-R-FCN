@@ -97,8 +97,8 @@ namespace caffe {
     Dtype* top_data = top[0]->mutable_gpu_data();
     int* mapping_channel_ptr = mapping_channel_.mutable_gpu_data();
     int count = top[0]->count();
-    caffe_gpu_set(count, Dtype(0), top_data);
-    caffe_gpu_set(count, -1, mapping_channel_ptr);
+    caffe_set(count, Dtype(0), top_data);
+    caffe_set(count, -1, mapping_channel_ptr);
     // NOLINT_NEXT_LINE(whitespace/operators)
     PSROIPoolingForward<Dtype> << <CAFFE_GET_BLOCKS(count),
       CAFFE_CUDA_NUM_THREADS >> >(count, bottom_data, spatial_scale_,
