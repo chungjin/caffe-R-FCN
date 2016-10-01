@@ -70,7 +70,6 @@ namespace caffe {
       for (int ctop = 0; ctop < output_dim; ++ctop) {
         for (int ph = 0; ph < pooled_height; ++ph) {
           for (int pw = 0; pw < pooled_width; ++pw) {
-            index = n*output_dim*pooled_height*pooled_width + ctop*pooled_height*pooled_width + ph*pooled_width + pw
       // The output is in order (n, ctop, ph, pw)
 
       // [start, end) interval for spatial sampling
@@ -86,8 +85,8 @@ namespace caffe {
         static_cast<Dtype>(round(bottom_rois[4]) + 1.) * spatial_scale;
 
       // Force too small ROIs to be 1x1
-      Dtype roi_width = max(roi_end_w - roi_start_w, 0.1);  // avoid 0
-      Dtype roi_height = max(roi_end_h - roi_start_h, 0.1);
+      Dtype roi_width = max<Dtype>(roi_end_w - roi_start_w, 0.1);  // avoid 0
+      Dtype roi_height = max<Dtype>(roi_end_h - roi_start_h, 0.1);
 
       // Compute w and h at bottom
       Dtype bin_size_h = roi_height / static_cast<Dtype>(pooled_height);
@@ -123,15 +122,17 @@ namespace caffe {
 
         Dtype bin_area = (hend - hstart)*(wend - wstart);
         if (is_empty){
-          top_data[index] = 0;
+          top_data[ph * pooled_width + pw] = 0;
         }
         else{
-          top_data[index] = out_sum/bin_area;
+          top_data[ph * pooled_width + pw] = out_sum/bin_area;
         }
 
-        mapping_channel[index] = c;
+        mapping_channel[ph * pooled_width + pw] = c;
         }
       }
+      bottom_data += bottom[0]->offset(0, 1);
+      top_data += top[0]->offset(0, 1);
     }
   }
 }
