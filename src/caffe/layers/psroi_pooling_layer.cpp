@@ -83,7 +83,6 @@ namespace caffe {
                                 static_cast<Dtype>(round(bottom_rois[3]) + 1.) * spatial_scale;
                             Dtype roi_end_h =
                                 static_cast<Dtype>(round(bottom_rois[4]) + 1.) * spatial_scale;
-
                             // Force too small ROIs to be 1x1
                             Dtype roi_width = max<Dtype>(roi_end_w - roi_start_w, 0.1);  // avoid 0
                             Dtype roi_height = max<Dtype>(roi_end_h - roi_start_h, 0.1);
