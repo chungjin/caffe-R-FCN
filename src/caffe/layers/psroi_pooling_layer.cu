@@ -92,6 +92,7 @@ namespace caffe {
   template <typename Dtype>
   void PSROIPoolingLayer<Dtype>::Forward_gpu(const vector<Blob<Dtype>*>& bottom,
     const vector<Blob<Dtype>*>& top) {
+      LOG(INFO) << "forward gpu";
     const Dtype* bottom_data = bottom[0]->gpu_data();
     const Dtype* bottom_rois = bottom[1]->gpu_data();
     Dtype* top_data = top[0]->mutable_gpu_data();
