@@ -1,15 +1,9 @@
 This branch of Caffe extends [BVLC-led Caffe](https://github.com/BVLC/caffe) by adding other functionalities such as managed-code wrapper, [Faster-RCNN](https://papers.nips.cc/paper/5638-faster-r-cnn-towards-real-time-object-detection-with-region-proposal-networks.pdf), [R-FCN](https://arxiv.org/pdf/1605.06409v2.pdf), etc.
 And it has been modified to be complied by c++4.4 and glibc 2.12. 
 
-**Contact**: Jin Zhang (zhangjin10@baidu.com)
+**Contact**: Jin Zhang (jeanz@cmu.edu)
 
 ---
-
-# Caffe
-
-|  **`Linux (GPU)`**   | 
-|-------------------|
-| [![Travis Build Status](https://api.travis-ci.org/Microsoft/caffe.svg?branch=master)](https://travis-ci.org/Microsoft/caffe) |             
 
 [![License](https://img.shields.io/badge/license-BSD-blue.svg)](LICENSE)
 
